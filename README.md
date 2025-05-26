@@ -1,12 +1,13 @@
-##Urban Garden Ground Cover  Semantic Segmentation
+
+Urban Garden Ground Cover  Semantic Segmentation
 
 *UAV orthomosaics, pixel-wise masks & reproducible deep-learning workflows*  
 
 **Code for the Paper**: Afrasiabian et al., Annotated centimeter resolution imagery dataset for Deep-learning based Semantic Segmentation in heterogeneous urban gardens to support biodiversity surveys.
 
-*Data are avaible on Zonedo
-*[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15496503.svg)](https://doi.org/10.5281/zenodo.15496503)
-*[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+Data are avaible on Zonedo
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15496503.svg)](https://doi.org/10.5281/zenodo.15496503)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ---
 
 ## 1. Overview  
@@ -26,7 +27,8 @@ This repository provides high-resolution Uncrewed Aerial Vehicle (UAV) orthomosa
 - **Metadata**: `dataset_metadata.csv` detailing image geometry, Metashape settings, and flight parameters.
 ---
 ## 3. Code
-*For each model, there is a specific script containing preprocessing, training, validation, and evaluation on the test subset.
+For each model, there is a specific script containing preprocessing, training, validation, and evaluation on the test subset.
+
 ---
 ## 4. Results
 Each model directory contains: 
