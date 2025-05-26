@@ -301,9 +301,7 @@ print(" - Confusion Matrix (Test):\n", test_cm)
 print(f" - Accuracy: {test_acc:.4f}")
 print(f" - Cohen's Kappa: {test_kappa:.4f}")
 
-# ----------------------------------------------------------------------------
-# 11. Save Model, Confusion Matrix, and Evaluation Metrics
-# ----------------------------------------------------------------------------
+# ---------Save Model, Confusion Matrix, and Evaluation Metrics---------------------
 print("\n[INFO] Saving model and evaluation outputs...")
 # Save the best model using joblib
 model_path = os.path.join(OUTPUT_DIR, "best_xgb_model.pth")

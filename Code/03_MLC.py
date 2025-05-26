@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
+
 # ---------------------------------------------------------------------
-#      Random Forest Script for Ground-Cover Classification
+#      MLC Script using Quadratic Discriminant Analysis for Ground-Cover Classification
 # ---------------------------------------------------------------------
 
 import os
@@ -10,24 +10,22 @@ import gc
 import time
 import numpy as np
 import tifffile
-import psutil  # For memory usage tracking
+import psutil
 from pathlib import Path
 
 # Sklearn tools
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV, PredefinedSplit
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.metrics import confusion_matrix, accuracy_score, cohen_kappa_score, f1_score
-from sklearn.utils.class_weight import compute_class_weight
-import joblib  # For model saving/loading
+import joblib  
 
-# ‑‑ plotting
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 # --------------------------- portable paths -------------------------
 REPO_ROOT   = Path(__file__).resolve().parent
-DATASET_DIR = Path(os.getenv("DATASET", REPO_ROOT / "Dataset" ))
-OUTPUT_DIR  = Path(os.getenv("RF_OUTPUT",  REPO_ROOT / "Output"))
+DATASET_DIR = Path(os.getenv("DATASET", REPO_ROOT / "Dataset"))
+OUTPUT_DIR  = Path(os.getenv("MLC_OUTPUT",  REPO_ROOT / "Output"))
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TRAIN_PATH = DATASET_DIR / "train"
@@ -35,7 +33,6 @@ VAL_PATH   = DATASET_DIR / "val"
 TEST_PATH  = DATASET_DIR / "test"
 
 # ------------------------Discover RGB images & their masks--------------------------------
-
 def list_rgb_and_masks(folder: str):
     rgb = sorted([
         os.path.join(folder, f)
@@ -101,13 +98,12 @@ def load_and_normalize_data(image_file):
     except Exception as e:
         print(f"Error loading file {image_file}: {e}")
         return None, None
-
+    
 # -----------------------Patch Extraction---------------------------------------
 def extract_patches(image, label, kn, max_patches_per_image=None):
     patch_size = 2 * kn + 1
     padded_img = np.pad(image, ((kn, kn), (kn, kn), (0, 0)), mode='reflect')
-    padded_lbl = np.pad(label, ((kn, kn), (kn, kn)), mode='constant', constant_values=0)
-
+    
     # 1) gather all valid coords
     coords = [(i,j) for i in range(label.shape[0])
                      for j in range(label.shape[1])
@@ -125,7 +121,7 @@ def extract_patches(image, label, kn, max_patches_per_image=None):
     for i,j in coords:
         patch = padded_img[i:i+patch_size, j:j+patch_size, :]
         patches.append(patch)
-        labels.append(label[i,j] - 1)   # zero-based
+        labels.append(label[i,j] - 1)   
     return patches, labels
 
 # ---------------------Custom "Dataset" to Gather Patches----------------------------------
@@ -162,15 +158,14 @@ class PatchDataset:
     def __getitem__(self, idx):
         return self.all_patches[idx], self.all_labels[idx]
 
-
 # -----------------------Build Datasets (Train, Val, Test)--------------------------------
 print("[INFO] Building Datasets...")
-kn = 5  # Half patch size
+kn = 5
 start_build_time = time.time()
 
-train_dataset = PatchDataset(train_image_files, kn=kn, max_patches_per_image=MAX_PATCHES_PER_IMAGE)
-val_dataset   = PatchDataset(val_image_files,   kn=kn, max_patches_per_image=MAX_PATCHES_PER_IMAGE)
-test_dataset  = PatchDataset(test_image_files,  kn=kn, max_patches_per_image=MAX_PATCHES_PER_IMAGE)
+train_dataset = PatchDataset(train_image_files, kn, MAX_PATCHES_PER_IMAGE)
+val_dataset   = PatchDataset(val_image_files,   kn, MAX_PATCHES_PER_IMAGE)
+test_dataset  = PatchDataset(test_image_files,  kn, MAX_PATCHES_PER_IMAGE)
 
 end_build_time = time.time()
 print(f"\n[INFO] Finished building all datasets in {end_build_time - start_build_time:.2f} seconds.")
@@ -185,83 +180,74 @@ def dataset_to_Xy(patch_dataset):
 print("[INFO] Converting training patches into (X_train, y_train)...")
 X_train, y_train = dataset_to_Xy(train_dataset)
 print(f" - Done. Shapes: X_train={X_train.shape}, y_train={y_train.shape}")
-print_memory_usage()
 
 print("[INFO] Converting validation patches into (X_val, y_val)...")
 X_val, y_val = dataset_to_Xy(val_dataset)
 print(f" - Done. Shapes: X_val={X_val.shape}, y_val={y_val.shape}")
-print_memory_usage()
 
 print("[INFO] Converting test patches into (X_test, y_test)...")
 X_test, y_test = dataset_to_Xy(test_dataset)
 print(f" - Done. Shapes: X_test={X_test.shape}, y_test={y_test.shape}")
-print_memory_usage()
 
-# -----------Random Forest: Hyperparameter Tuning using RandomizedSearchCV------------------
+# ----------------Enhanced Hyperparameter Tuning-----------------------------
 print("\n[INFO] Starting Hyperparameter Search using RandomizedSearchCV...")
+
+# Combine training and validation data for tuning 
 X_combined = np.concatenate([X_train, X_val], axis=0)
 y_combined = np.concatenate([y_train, y_val], axis=0)
 
+# Create predefined split: -1 for training, 0 for validation
 train_fold = -1 * np.ones(len(y_train), dtype=int)
-val_fold = np.zeros(len(y_val), dtype=int)
+val_fold = 0 * np.ones(len(y_val), dtype=int)
 test_fold = np.concatenate([train_fold, val_fold])
 predef_split = PredefinedSplit(test_fold)
 
-# Expanded hyperparameter search space
+# Define an expanded parameter grid for QDA
+uniform_priors = np.ones(n_classes) / n_classes  
 param_dist = {
-    'n_estimators': [100, 200, 300, 400, 500],
-    'max_depth': [10, 20, 30, None],  
-    'min_samples_leaf': [1, 3, 5],
-    'min_samples_split': [2, 5, 10],  
-    'max_features': ['auto', 'sqrt', 0.5]  
+    "reg_param": np.linspace(0.0, 1.0, 21),   
+    "priors":    [None, uniform_priors],
 }
 
+qda_base = QuadraticDiscriminantAnalysis(store_covariance=False)
 random_search = RandomizedSearchCV(
-    estimator=RandomForestClassifier(random_state=42, n_jobs=-1),
+    estimator=qda_base,
     param_distributions=param_dist,
-    n_iter=50,  
-    scoring='accuracy',
+    n_iter=50,           
     cv=predef_split,
+    scoring="accuracy",
+    n_jobs=-1,            
     random_state=42,
-    n_jobs=-1,  
-    refit=False
+    verbose=1,
+    refit=False,
 )
 
 start_rs_time = time.time()
 random_search.fit(X_combined, y_combined)
-end_rs_time = time.time()
-rs_search_time = end_rs_time - start_rs_time
+end_rs_time   = time.time()
+grid_search_time = end_rs_time - start_rs_time
 
-print(f"[INFO] RandomizedSearchCV completed in {rs_search_time:.2f} seconds.")
-print(f"[INFO] Best Hyperparameters found: {random_search.best_params_}")
+print(f"[INFO] RandomizedSearchCV completed in {grid_search_time:.2f} s.")
+print("[INFO] Best hyper-parameters:", random_search.best_params_)
 print(f"[INFO] Best validation accuracy: {random_search.best_score_:.4f}")
-print_memory_usage()
 
 # --------------Train Final Model with Best Hyperparameters--------------------------
-print("[INFO] Training final Random Forest with best hyperparameters...")
-best_params = random_search.best_params_
-best_rf = RandomForestClassifier(
-    **best_params,
-    random_state=42,
-    n_jobs=-1
-)
+print("[INFO] Training final QDA with best hyperparameters on X_train only...")
 
-# Optional: Handle class imbalance with sample weights
-class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
-sample_weights = np.array([class_weights[label] for label in y_train])
+best_params = random_search.best_params_
+best_mlc = QuadraticDiscriminantAnalysis(**best_params, store_covariance=False)
 
 start_train_time = time.time()
-best_rf.fit(X_train, y_train, sample_weight=sample_weights)  # Using sample weights
+best_mlc.fit(X_train, y_train)  # Removed sample_weight
 end_train_time = time.time()
 training_time = end_train_time - start_train_time
 
-print(f"[INFO] Done training final model in {training_time:.2f} seconds.")
-print_memory_usage()
+print(f"[INFO] Done training final MLC model in {training_time:.2f} seconds.")
 
 # ---------------------Validation Evaluation--------------------------------------
 print("\n[INFO] Validation Set Evaluation...")
 start_val_eval = time.time()
-y_val_pred = best_rf.predict(X_val)
+y_val_pred = best_mlc.predict(X_val)
 end_val_eval = time.time()
 
 validation_time = end_val_eval - start_val_eval
@@ -277,7 +263,7 @@ print(f" - Cohen's Kappa: {val_kappa:.4f}")
 # --------------------------Test Evaluation---------------------------------------
 print("\n[INFO] Test Set Evaluation...")
 start_test_eval = time.time()
-y_test_pred = best_rf.predict(X_test)
+y_test_pred = best_mlc.predict(X_test)
 end_test_eval = time.time()
 
 test_time = end_test_eval - start_test_eval
@@ -290,17 +276,16 @@ print(" - Confusion Matrix (Test):\n", test_cm)
 print(f" - Accuracy: {test_acc:.4f}")
 print(f" - Cohen's Kappa: {test_kappa:.4f}")
 
-# -----------------Save Model, Confusion Matrix, and Evaluation Metrics--------------
+# ---------Save Model, Confusion Matrix, and Evaluation Metrics---------------------
 print("\n[INFO] Saving model and evaluation outputs...")
-model_path = os.path.join(OUTPUT_DIR, "best_rf_model.pth")
-joblib.dump(best_rf, model_path)
-print(f" - Best Random Forest model saved to: {model_path}")
+model_path = os.path.join(OUTPUT_DIR, "best_mlc_model.pth")
+joblib.dump(best_mlc, model_path)
+print(f" - Best MLC model saved to: {model_path}")
 
 conf_matrix_txt_path = os.path.join(OUTPUT_DIR, "test_confusion_matrix.txt")
 np.savetxt(conf_matrix_txt_path, test_cm, delimiter=',', fmt='%d')
 print(f" - Confusion matrix saved as text file to {conf_matrix_txt_path}")
 
-# Compute overall and per-class metrics
 overall_accuracy = accuracy_score(y_test, y_test_pred)
 overall_kappa = cohen_kappa_score(y_test, y_test_pred)
 overall_f1 = f1_score(y_test, y_test_pred, average='weighted')
@@ -314,14 +299,15 @@ for i in range(n_classes):
     FN = np.sum(test_cm[i, :]) - TP
     denominator_dice = (2 * TP + FP + FN)
     denominator_iou = (TP + FP + FN)
+    
     dice = (2 * TP / denominator_dice) if denominator_dice > 0 else 0
     iou = (TP / denominator_iou) if denominator_iou > 0 else 0
+    
     dice_scores.append(dice)
     iou_scores.append(iou)
 
 jaccard_indices = iou_scores.copy()
 
-# Prepare metrics string
 metrics_str = "Overall Metrics:\n"
 metrics_str += f"Accuracy: {overall_accuracy:.4f}\n"
 metrics_str += f"Cohen's Kappa: {overall_kappa:.4f}\n"
@@ -332,11 +318,11 @@ for i in range(n_classes):
     metrics_str += f"{i}\t{per_class_f1[i]:.4f}\t\t{dice_scores[i]:.4f}\t\t\t{iou_scores[i]:.4f}\n"
 
 metrics_str += "\nComputational Time Metrics (in seconds):\n"
-metrics_str += f"RandomizedSearchCV Time: {rs_search_time:.2f}\n"
+metrics_str += f"RandomizedSearchCV Time: {grid_search_time:.2f}\n"
 metrics_str += f"Training Time: {training_time:.2f}\n"
 metrics_str += f"Validation Evaluation Time: {validation_time:.2f}\n"
 metrics_str += f"Test Evaluation Time: {test_time:.2f}\n"
-total_time = rs_search_time + training_time + validation_time + test_time
+total_time = grid_search_time + training_time + validation_time + test_time
 metrics_str += f"Total Computational Time: {total_time:.2f}\n"
 
 metrics_file_path = os.path.join(OUTPUT_DIR, "evaluation_metrics.txt")
@@ -345,5 +331,4 @@ with open(metrics_file_path, 'w') as f:
 print(f" - Evaluation metrics saved to: {metrics_file_path}")
 
 gc.collect()
-print("\n[INFO] Done! Enhanced Random Forest training & evaluation completed successfully.")
-print_memory_usage()
+print("\n[INFO] Done! Enhanced QDA-based MLC training & evaluation completed successfully.")
