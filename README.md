@@ -5,7 +5,7 @@
 **Code for the Paper**: Afrasiabian et al., Annotated centimeter resolution imagery dataset for Deep-learning based Semantic Segmentation in heterogeneous urban gardens to support biodiversity surveys.
 
 Data are avaible on Zonedo
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15496503.svg)](https://doi.org/10.5281/zenodo.15496503)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15261988.svg)](https://doi.org/10.5281/zenodo.15261988)
 
 ## 1. Overview  
 This repository provides high-resolution Uncrewed Aerial Vehicle (UAV) orthomosaic RGB imagery and corresponding ground-truth masks for semantic segmentation of ground cover types in urban community gardens. Collected from five community gardens in Munich, Germany, during 2021 and 2022, the dataset supports research in urban ecology, remote sensing, and machine learning.
