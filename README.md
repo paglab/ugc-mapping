@@ -3,7 +3,7 @@
 
 *UAV orthomosaics, pixel-wise masks & reproducible deep-learning workflows*  
 
-**Code for the Paper**: Afrasiabian et al., *Annotated centimeter resolution imagery dataset for Deep-learning based Semantic Segmentation in heterogeneous urban gardens to support biodiversity surveys.
+**Code for the Paper**: Afrasiabian et al., Annotated centimeter resolution imagery dataset for Deep-learning based Semantic Segmentation in heterogeneous urban gardens to support biodiversity surveys.
 
 Data are avaible on Zonedo
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15496503.svg)](https://doi.org/10.5281/zenodo.15496503)
@@ -18,7 +18,7 @@ This repository provides high-resolution Uncrewed Aerial Vehicle (UAV) orthomosa
 - **Imagery**: 24 RGB GeoTIFFs with a spatial resolution of 3.2–7.9 mm, projected in EPSG:25832.
 - **Masks**: Single-band GeoTIFFs saved in the same folder as the RGB images, with filenames appended with `_Labelled`. Each mask includes eight classes: grass, herb, litter, soil, stone, straw, wood, and woodchip.
 - **Split**: Images are divided into 14 `train/`, 5 `val/`, and 5 `test/` sets.
-- **Patches**: Each orthomosaic image is cropped into 512 × 512 px patches with a 256 px stride, resulting in 12 patches per image, suitable for deep learning applications.
+- **Patches**: Each orthomosaic image is cropped into 512 × 512 px patches with a 256 px stride, suitable for deep learning applications.
 - **Metadata**: `dataset_metadata.csv` detailing image geometry, Metashape settings, and flight parameters.
 
 ---
