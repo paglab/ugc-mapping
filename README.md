@@ -1,7 +1,6 @@
 
 # Urban Garden Ground Cover  Semantic Segmentation
 
-*UAV orthomosaics, pixel-wise masks & reproducible deep-learning workflows*  
 
 **Code for the Paper**: Afrasiabian et al., Annotated centimeter resolution imagery dataset for Deep-learning based Semantic Segmentation in heterogeneous urban gardens to support biodiversity surveys.
 
