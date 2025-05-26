@@ -3,7 +3,7 @@
 
 *UAV orthomosaics, pixel-wise masks & reproducible deep-learning workflows*  
 
-**Code for the Paper**: Afrasiabian et al., Annotated centimeter resolution imagery dataset for Deep-learning based Semantic Segmentation in heterogeneous urban gardens to support biodiversity surveys.
+**Code for the Paper**: Afrasiabian et al., *Annotated centimeter resolution imagery dataset for Deep-learning based Semantic Segmentation in heterogeneous urban gardens to support biodiversity surveys.
 
 Data are avaible on Zonedo
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15496503.svg)](https://doi.org/10.5281/zenodo.15496503)
