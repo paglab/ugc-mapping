@@ -1,0 +1,21 @@
+Overall Metrics (Excluding Background):
+Accuracy: 0.8984
+Cohen's Kappa: 0.8744
+Weighted F1-Score: 0.8876
+
+Per-Class Metrics (0..8):
+Class	F1-Score	Dice Coefficient	IoU (Jaccard Index)
+0	0.1223		0.1223		0.0651
+1	0.0184		0.0184		0.0093
+2	0.0119		0.0119		0.0060
+3	0.0001		0.0001		0.0001
+4	0.0295		0.0295		0.0150
+5	0.0018		0.0018		0.0009
+6	0.0010		0.0010		0.0005
+7	0.0068		0.0068		0.0034
+8	0.0165		0.0165		0.0083
+
+Computational Time Metrics (in seconds):
+Total Training Time: 46125.48
+Test Evaluation Time: 889.41
+Total Computational Time: 47014.89
